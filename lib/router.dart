@@ -31,7 +31,7 @@ class AppRouter {
 
   Future<void> gotoAlbumDetailsScreen(
     BuildContext context, {
-    required int albumId,
+    required dynamic albumId,
   }) async {
     await Navigator.of(context).push(CupertinoPageRoute(
       builder: (_) => const AlbumDetailsScreen(),
@@ -41,11 +41,21 @@ class AppRouter {
 
   Future<void> gotoArtistDetailsScreen(
     BuildContext context, {
-    required int artistId,
+    required dynamic artistId,
   }) async {
     await Navigator.of(context).push(CupertinoPageRoute(
       builder: (_) => const ArtistDetailsScreen(),
       settings: RouteSettings(arguments: artistId),
+    ));
+  }
+
+  gotoPodcastDetailsScreen(
+    BuildContext context, {
+    required String podcastId,
+  }) async {
+    await Navigator.of(context).push(CupertinoPageRoute(
+      builder: (_) => const PodcastDetailsScreen(),
+      settings: RouteSettings(arguments: podcastId),
     ));
   }
 
@@ -79,15 +89,30 @@ class AppRouter {
     );
   }
 
-  Future<void> showActionSheet(
+  Future<void> showPlayableActionSheet(
     BuildContext context, {
-    required Song song,
+    required Playable playable,
   }) async {
     showModalBottomSheet<void>(
       useRootNavigator: true, // covering everything else
       context: context,
       isScrollControlled: true,
-      builder: (_) => SongActionSheet(song: song),
+      builder: (_) => PlayableActionSheet(playable: playable),
+    );
+  }
+
+  Future<void> showAddPodcastSheet(BuildContext context) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          height: MediaQuery.of(context).size.height,
+          child: const AddPodcastSheet(),
+        );
+      },
     );
   }
 }

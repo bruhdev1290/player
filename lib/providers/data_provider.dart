@@ -7,9 +7,11 @@ import 'package:version/version.dart';
 
 class DataProvider with ChangeNotifier {
   final PlaylistProvider _playlistProvider;
+  final PlayableProvider _playableProvider;
 
-  DataProvider({required playlistProvider})
-      : _playlistProvider = playlistProvider;
+  DataProvider({required playlistProvider, required playableProvider})
+      : _playlistProvider = playlistProvider,
+        _playableProvider = playableProvider;
 
   Future<void> init() async {
     final Map<String, dynamic> data = await get('data');
@@ -28,7 +30,7 @@ class DataProvider with ChangeNotifier {
     if (data.containsKey('queue_state')) {
       AppState.set(
         ['app', 'queueState'],
-        QueueState.parse(data['queue_state']),
+        QueueState.parse(data['queue_state'], _playableProvider),
       );
     } else {
       AppState.set(['app', 'queueState'], QueueState.empty());

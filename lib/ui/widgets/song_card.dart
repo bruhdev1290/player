@@ -34,7 +34,7 @@ class _SongCardState extends State<SongCard> {
       },
       onLongPress: () {
         HapticFeedback.mediumImpact();
-        widget.router.showActionSheet(context, song: widget.song);
+        widget.router.showPlayableActionSheet(context, playable: widget.song);
       },
       behavior: HitTestBehavior.opaque,
       child: AnimatedOpacity(
@@ -42,7 +42,7 @@ class _SongCardState extends State<SongCard> {
         opacity: _opacity,
         child: Column(
           children: <Widget>[
-            SongThumbnail.md(song: widget.song),
+            PlayableThumbnail.md(playable: widget.song),
             const SizedBox(height: 12),
             SizedBox(
               width: _cardWidth,

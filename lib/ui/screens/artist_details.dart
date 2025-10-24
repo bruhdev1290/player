@@ -22,25 +22,25 @@ class ArtistDetailsScreen extends StatefulWidget {
 
 class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
   var _searchQuery = '';
-  var cover = CoverImageStack(songs: []);
+  var cover = CoverImageStack(playables: []);
 
-  Future<List<Object>> buildRequest(int artistId, {bool forceRefresh = false}) {
+  Future<List<Object>> buildRequest(dynamic artistId, {bool forceRefresh = false}) {
     return Future.wait([
       context
           .read<ArtistProvider>()
           .resolve(artistId, forceRefresh: forceRefresh),
       context
-          .read<SongProvider>()
+          .read<PlayableProvider>()
           .fetchForArtist(artistId, forceRefresh: forceRefresh),
     ]);
   }
 
   @override
   Widget build(BuildContext context) {
-    final artistId = ModalRoute.of(context)!.settings.arguments as int;
+    final artistId = ModalRoute.of(context)!.settings.arguments;
     var sortConfig = AppState.get(
       'artist.sort',
-      SongSortConfig(field: 'title', order: SortOrder.asc),
+      PlayableSortConfig(field: 'title', order: SortOrder.asc),
     )!;
 
     return Scaffold(
@@ -50,15 +50,15 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
           builder: (_, AsyncSnapshot<List<dynamic>> snapshot) {
             if (!snapshot.hasData ||
                 snapshot.connectionState == ConnectionState.active)
-              return const SongListScreenPlaceholder();
+              return const PlayableListScreenPlaceholder();
 
             if (snapshot.hasError)
               return OopsBox(onRetry: () => setState(() {}));
 
-            final songs = snapshot.requireData[1] as List<Song>;
+            final songs = snapshot.requireData[1] as List<Playable>;
 
             if (cover.isEmpty) {
-              cover = CoverImageStack(songs: songs);
+              cover = CoverImageStack(playables: songs);
             }
 
             final artist = snapshot.requireData[0] as Artist;
@@ -126,16 +126,16 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
                     ),
                     if (songs.isNotEmpty)
                       SliverToBoxAdapter(
-                        child: SongListHeader(
-                          songs: displayedSongs,
+                        child: PlayableListHeader(
+                          playables: displayedSongs,
                           onSearchQueryChanged: (String query) {
                             setState(() => _searchQuery = query);
                           },
                         ),
                       ),
-                    SliverSongList(
-                      songs: displayedSongs,
-                      listContext: SongListContext.artist,
+                    SliverPlayableList(
+                      playables: displayedSongs,
+                      listContext: PlayableListContext.artist,
                     ),
                     const BottomSpace(),
                   ],

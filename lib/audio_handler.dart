@@ -1,25 +1,24 @@
 import 'dart:io';
 
 import 'package:app/app_state.dart';
+import 'package:app/extensions/extensions.dart';
 import 'package:app/models/models.dart';
 import 'package:app/providers/providers.dart';
 import 'package:app/utils/api_request.dart';
+import 'package:app/utils/features.dart';
+import 'package:app/utils/preferences.dart' as preferences;
 import 'package:app/values/queue_state.dart';
 import 'package:audio_service/audio_service.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:app/utils/preferences.dart' as preferences;
 import 'package:collection/collection.dart';
-import 'package:version/version.dart';
-import 'package:app/extensions/extensions.dart';
+import 'package:just_audio/just_audio.dart';
 
 class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   static const MAX_ERROR_COUNT = 10;
 
   late final DownloadProvider downloadProvider;
-  late final SongProvider songProvider;
+  late final PlayableProvider playableProvider;
   late AudioServiceRepeatMode repeatMode;
 
-  var _supportsQueueStateSync = false;
   var _errorCount = 0;
   var _initialized = false;
   var _currentMediaItem = MediaItem(id: '', title: '');
@@ -34,7 +33,7 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   /// Since the providers and preferences storage are not available at the time
   /// of construction, this method must be called before using the handler.
   init({
-    required SongProvider songProvider,
+    required PlayableProvider playableProvider,
     required DownloadProvider downloadProvider,
   }) async {
     if (_initialized) return;
@@ -44,19 +43,12 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
     this
       ..downloadProvider = downloadProvider
-      ..songProvider = songProvider
+      ..playableProvider = playableProvider
       ..repeatMode = preferences.repeatMode;
 
     await this.setVolume(preferences.volume);
 
-    try {
-      _supportsQueueStateSync = AppState.get<Version>(['app', 'apiVersion'])! >
-          Version.parse('6.11.5');
-    } catch (e) {
-      print(e);
-    }
-
-    if (_supportsQueueStateSync) {
+    if (Feature.queueStateSync.isSupported()) {
       _trySetUpQueue();
     }
 
@@ -119,17 +111,18 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   void _trySetUpQueue() async {
     final state = AppState.get<QueueState>(['app', 'queueState'])!;
 
-    if (state.songs.isEmpty) return;
+    if (state.playables.isEmpty) return;
 
     try {
-      final songs = songProvider.syncWithVault(state.songs);
-      await replaceQueue(songs, shuffle: false, autoPlay: false);
+      final playables = playableProvider.syncWithVault(state.playables);
+      await replaceQueue(playables, shuffle: false, autoPlay: false);
 
-      if (state.currentSong != null) {
-        var currentSong = songProvider.syncWithVault(state.currentSong).first;
+      if (state.currentPlayable != null) {
+        var currentPlayable =
+            playableProvider.syncWithVault(state.currentPlayable).first;
 
         var queuedMediaItem = queue.value.firstWhereOrNull(
-          (item) => item.id == currentSong.id,
+          (item) => item.id == currentPlayable.id,
         );
 
         if (queuedMediaItem != null) {
@@ -139,11 +132,11 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       }
 
       queue.stream.listen((mediaItems) {
-        var songIds = mediaItems.map((item) => item.id).toList();
-        if (songIds.isEmpty) return;
+        var playableIds = mediaItems.map((item) => item.id).toList();
+        if (playableIds.isEmpty) return;
 
         put('queue/state', data: {
-          'songs': songIds,
+          'songs': playableIds,
           'song': _currentMediaItem.id,
         });
       });
@@ -155,18 +148,32 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
           'song': _currentMediaItem.id,
           'position': position.inSeconds,
         });
+
+        // if the playable is an episode, we want to keep track of the progress
+        // in the app as well.
+        if (_currentMediaItem.extras?['type'] == 'episode') {
+          setPlaybackPositionToState(_currentMediaItem.id, position.inSeconds);
+        }
       });
     } catch (e) {
       print(e);
     }
   }
 
+  num? getPlaybackPositionFromState(String playableId) {
+    return AppState.get<num>(['playbackPosition', playableId]);
+  }
+
+  void setPlaybackPositionToState(String playableId, num position) {
+    AppState.set(['playbackPosition', playableId], position);
+  }
+
   _setPlayerSource(MediaItem mediaItem) async {
     _currentMediaItem = mediaItem;
     this.mediaItem.add(_currentMediaItem);
 
-    final song = songProvider.byId(mediaItem.id)!;
-    final download = downloadProvider.getForSong(song);
+    final playable = playableProvider.byId(mediaItem.id)!;
+    final download = downloadProvider.getForPlayable(playable);
 
     if (download == null) {
       await _player.setUrl(mediaItem.extras?['sourceUrl'] as String);
@@ -187,23 +194,23 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     await _player.pause();
   }
 
-  Future<void> queueAndPlay(Song song) async {
-    await this.queueAfterCurrent(song);
-    await _playAtIndex(queue.value.indexOf(await song.asMediaItem()));
+  Future<void> queueAndPlay(Playable playable) async {
+    await this.queueAfterCurrent(playable);
+    await _playAtIndex(queue.value.indexOf(await playable.asMediaItem()));
   }
 
-  Future<void> maybeQueueAndPlay(Song song) async {
-    if (await queued(song)) {
-      await _playAtIndex(queue.value.indexOf(await song.asMediaItem()));
+  Future<void> maybeQueueAndPlay(Playable playable, {position = 0}) async {
+    if (await queued(playable)) {
+      await _playAtIndex(queue.value.indexOf(await playable.asMediaItem()));
     } else {
-      await queueAndPlay(song);
+      await queueAndPlay(playable);
     }
   }
 
-  Future<void> queueAfterCurrent(Song song) async {
-    final mediaItem = await song.asMediaItem();
+  Future<void> queueAfterCurrent(Playable playable) async {
+    final mediaItem = await playable.asMediaItem();
 
-    if (await queued(song)) {
+    if (await queued(playable)) {
       await this.removeQueueItem(mediaItem);
     }
 
@@ -239,9 +246,11 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     if (queue.value.length <= index) return;
 
     final mediaItem = queue.value[index];
+    final position = getPlaybackPositionFromState(mediaItem.id) ?? 0;
 
     try {
       await _setPlayerSource(mediaItem);
+      _player.seek(Duration(seconds: position.toInt()));
       await play();
 
       put('queue/playback-status', data: {
@@ -279,8 +288,8 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     await _playAtIndex(previousIndex);
   }
 
-  Future<bool> queued(Song song) async =>
-      queue.value.contains(await song.asMediaItem());
+  Future<bool> queued(Playable playable) async =>
+      queue.value.contains(await playable.asMediaItem());
 
   @override
   Future<void> removeQueueItemAt(int index) async {
@@ -307,11 +316,11 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   Future<void> setVolume(double value) async => await _player.setVolume(value);
 
   Future<void> replaceQueue(
-    List<Song> songs, {
+    List<Playable> playables, {
     bool shuffle = false,
     bool autoPlay = true,
   }) async {
-    final items = await Future.wait(songs.map((song) => song.asMediaItem()));
+    final items = await Future.wait(playables.map((p) => p.asMediaItem()));
     if (shuffle) items.shuffle();
 
     await updateQueue(items);
@@ -351,19 +360,19 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     await clearQueue();
   }
 
-  Future<void> queueToBottom(Song song) async {
-    final mediaItem = await song.asMediaItem();
+  Future<void> queueToBottom(Playable playable) async {
+    final mediaItem = await playable.asMediaItem();
 
-    if (await queued(song)) {
+    if (await queued(playable)) {
       await removeQueueItem(mediaItem);
     }
 
     await addQueueItem(mediaItem);
   }
 
-  Future<void> removeFromQueue(Song song) async {
-    if (await queued(song)) {
-      await removeQueueItem(await song.asMediaItem());
+  Future<void> removeFromQueue(Playable playable) async {
+    if (await queued(playable)) {
+      await removeQueueItem(await playable.asMediaItem());
     }
   }
 }

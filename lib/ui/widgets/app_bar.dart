@@ -29,7 +29,7 @@ class AppBar extends StatelessWidget {
           end: Alignment.bottomCenter,
           colors: [
             Colors.transparent,
-            AppColors.screenHeaderBackground,
+            AppColors.flexibleScreenHeaderBackground,
           ],
         ),
       ),
@@ -44,10 +44,14 @@ class AppBar extends StatelessWidget {
       pinned: true,
       expandedHeight: 290,
       actions: actions,
-      backgroundColor: AppColors.screenHeaderBackground,
-      shadowColor: Colors.transparent,
+      backgroundColor: AppColors.flexibleScreenHeaderBackground,
       flexibleSpace: FrostedGlassBackground(
         child: FlexibleSpaceBar(
+          expandedTitleScale: 1.3,
+          titlePadding: EdgeInsets.symmetric(
+            horizontal: 48,
+            vertical: 12,
+          ),
           title: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppDimensions.hPadding,
@@ -55,6 +59,7 @@ class AppBar extends StatelessWidget {
             child: Text(
               headingText,
               overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
           ),
           background: Stack(
@@ -76,22 +81,27 @@ class AppBar extends StatelessWidget {
 }
 
 class CoverImageStack extends StatelessWidget {
-  final List<Song> songs;
+  final List<Playable> playables;
 
-  const CoverImageStack({Key? key, required this.songs}) : super(key: key);
+  const CoverImageStack({Key? key, required this.playables}) : super(key: key);
 
-  bool get isEmpty => songs.isEmpty;
+  bool get isEmpty => playables.isEmpty;
 
   @override
   Widget build(BuildContext context) {
     const imageCount = 4;
     List<String?> images = [];
 
-    if (songs.isNotEmpty) {
-      images = songs
-          .where((song) => song.hasCustomImage)
-          .map((song) => song.albumCoverUrl)
-          .toList();
+    if (playables.isNotEmpty) {
+      images = playables.where((playable) => playable.hasCustomImage).map(
+        (playable) {
+          if (playable is Song) {
+            return playable.albumCoverUrl;
+          } else if (playable is Episode) {
+            return playable.imageUrl;
+          }
+        },
+      ).toList();
 
       images.shuffle();
       images = images.take(imageCount).toList();
@@ -152,7 +162,8 @@ class CoverImage extends StatelessWidget {
           decoration: BoxDecoration(
             image: DecorationImage(
               colorFilter: ColorFilter.mode(
-                AppColors.screenHeaderBackground.withOpacity(overlayOpacity),
+                AppColors.flexibleScreenHeaderBackground
+                    .withOpacity(overlayOpacity),
                 BlendMode.srcOver,
               ),
               image: imageUrl == null
@@ -163,7 +174,7 @@ class CoverImage extends StatelessWidget {
             ),
             boxShadow: const <BoxShadow>[
               const BoxShadow(
-                color: AppColors.screenHeaderBackground,
+                color: AppColors.flexibleScreenHeaderBackground,
                 blurRadius: 10.0,
                 offset: const Offset(0, 6),
               ),
