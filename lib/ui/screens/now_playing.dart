@@ -80,34 +80,53 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
     );
 
     final thumbnail = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
       child: Hero(
         tag: 'hero-now-playing-thumbnail',
-        child: PlayableThumbnail.xl(playable: playable),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: PlayableThumbnail.xl(playable: playable),
+          ),
+        ),
       ),
     );
 
-    final infoPane = Column(
-      children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Expanded(child: PlayableInfo(playable: playable)),
-            const SizedBox(width: 8),
-            PlayableCacheIcon(playable: playable),
-            GestureDetector(
-              onTap: () => widget.router.showPlayableActionSheet(
-                context,
-                playable: playable,
+    final infoPane = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Expanded(child: PlayableInfo(playable: playable)),
+              const SizedBox(width: 12),
+              PlayableCacheIcon(playable: playable),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => widget.router.showPlayableActionSheet(
+                  context,
+                  playable: playable,
+                ),
+                child: const Icon(CupertinoIcons.ellipsis),
               ),
-              child: const Icon(CupertinoIcons.ellipsis),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ProgressBar(playable: playable),
-      ],
+            ],
+          ),
+          const SizedBox(height: 16),
+          ProgressBar(playable: playable),
+        ],
+      ),
     );
 
     return Stack(
@@ -128,36 +147,42 @@ class _NowPlayingScreenState extends State<NowPlayingScreen>
                 thumbnail,
                 infoPane,
                 const AudioControls(),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const VolumeSlider(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: <Widget>[
-                        const RepeatModeButton(),
-                        IconButton(
-                          onPressed: () => showInfoSheet(
-                            context,
-                            playable: playable,
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const VolumeSlider(),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: <Widget>[
+                          const RepeatModeButton(),
+                          IconButton(
+                            onPressed: () => showInfoSheet(
+                              context,
+                              playable: playable,
+                            ),
+                            icon: Icon(
+                              CupertinoIcons.text_quote,
+                              color: bottomIconColor,
+                            ),
+                            tooltip: 'Lyrics',
                           ),
-                          icon: Icon(
-                            CupertinoIcons.text_quote,
-                            color: bottomIconColor,
+                          IconButton(
+                            onPressed: () =>
+                                Navigator.of(context, rootNavigator: true)
+                                    .pushNamed(QueueScreen.routeName),
+                            icon: Icon(
+                              CupertinoIcons.list_number,
+                              color: bottomIconColor,
+                            ),
+                            tooltip: 'Queue',
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () =>
-                              Navigator.of(context, rootNavigator: true)
-                                  .pushNamed(QueueScreen.routeName),
-                          icon: Icon(
-                            CupertinoIcons.list_number,
-                            color: bottomIconColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

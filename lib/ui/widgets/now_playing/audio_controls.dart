@@ -9,21 +9,28 @@ class AudioControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: <Widget>[
-        IconButton(
-          onPressed: () async => await audioHandler.skipToPrevious(),
-          icon: const Icon(CupertinoIcons.backward_fill),
-          iconSize: 48,
-        ),
-        const PlayPauseButton(),
-        IconButton(
-          onPressed: audioHandler.skipToNext,
-          icon: const Icon(CupertinoIcons.forward_fill),
-          iconSize: 48,
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          IconButton(
+            onPressed: () async => await audioHandler.skipToPrevious(),
+            icon: const Icon(CupertinoIcons.backward_fill),
+            iconSize: 52,
+            tooltip: 'Previous',
+          ),
+          const SizedBox(width: 24),
+          const PlayPauseButton(),
+          const SizedBox(width: 24),
+          IconButton(
+            onPressed: audioHandler.skipToNext,
+            icon: const Icon(CupertinoIcons.forward_fill),
+            iconSize: 52,
+            tooltip: 'Next',
+          ),
+        ],
+      ),
     );
   }
 }
@@ -58,12 +65,20 @@ class _PlayPauseButtonState extends State<PlayPauseButton>
     final state = _state;
     if (state == null) return const SizedBox.shrink();
 
-    return IconButton(
-      onPressed: audioHandler.playOrPause,
-      icon: state.playing
-          ? const Icon(CupertinoIcons.pause_solid)
-          : const Icon(CupertinoIcons.play_fill),
-      iconSize: 64,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        onPressed: audioHandler.playOrPause,
+        icon: state.playing
+            ? const Icon(CupertinoIcons.pause_solid)
+            : const Icon(CupertinoIcons.play_fill),
+        iconSize: 68,
+        padding: const EdgeInsets.all(16),
+        tooltip: state.playing ? 'Pause' : 'Play',
+      ),
     );
   }
 }
