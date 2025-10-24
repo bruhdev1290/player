@@ -84,7 +84,6 @@ Future<void> main() async {
       androidNotificationChannelName: 'Koel audio playback',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: false,
-      androidEnableQueue: true,
     ),
   );
 
