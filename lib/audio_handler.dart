@@ -12,7 +12,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:collection/collection.dart';
 import 'package:just_audio/just_audio.dart';
 
-class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
+class KoelAudioHandler extends BaseAudioHandler
+    with QueueHandler, SeekHandler {
   static const MAX_ERROR_COUNT = 10;
 
   late final DownloadProvider downloadProvider;
@@ -374,5 +375,38 @@ class KoelAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     if (await queued(playable)) {
       await removeQueueItem(await playable.asMediaItem());
     }
+  }
+
+  /// Android Auto support: Browse media content
+  @override
+  Future<List<MediaItem>> getChildren(String parentMediaId,
+      [Map<String, dynamic>? options]) async {
+    // Root menu items for Android Auto
+    if (parentMediaId == AudioService.recentRootId) {
+      // Return recently played items
+      return queue.value.take(10).toList();
+    }
+
+    if (parentMediaId == AudioService.browsableRootId) {
+      // Return browsable categories
+      return [
+        MediaItem(
+          id: '__queue__',
+          album: '',
+          title: 'Current Queue',
+          playable: true,
+          extras: {
+            'isFolder': true,
+          },
+        ),
+      ];
+    }
+
+    if (parentMediaId == '__queue__') {
+      // Return current queue
+      return queue.value;
+    }
+
+    return [];
   }
 }
