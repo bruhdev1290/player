@@ -62,19 +62,20 @@ dependencies:
   faker: any
   ulid: ^2.0.1
 dev_dependencies:
-  golden_toolkit: ^0.12.0
+  golden_toolkit: ^0.15.0
   fake_async: ^1.2.0
   mockito: ^5.0.12
   flutter_test:
     sdk: flutter
+  flutter_lints: ^2.0.0
+  rxdart: any
+  flutter_cache_manager: any
+  file: any
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter.
-  rxdart: any
-  flutter_cache_manager: any
-  file: any
 flutter:
 
   # The following line ensures that the Material Icons font is
